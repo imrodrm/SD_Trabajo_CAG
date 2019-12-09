@@ -2,12 +2,20 @@ package cartas;
 
 public class Carta {
 
-	String texto;
-	Color color;
+	private String texto;
+	private Color color;
 	
 	public Carta(String txt, Color c) {
 		this.texto=txt;
 		this.color=c;
+	}
+	
+	public String getTexto() {
+		return this.texto;
+	}
+	
+	public Color getColor() {
+		return this.color;
 	}
 	
 	public String toString() {
