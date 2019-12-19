@@ -2,6 +2,7 @@ package jugadores;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import cartas.Carta;
 
@@ -20,12 +21,11 @@ public class Jugador {
 		return this.nombre;
 	}
 	
-	public String muestraMano() {
-		String mano = "Tus cartas blancas son: \n";
+	public void muestraMano() {
+		System.out.println("Tus cartas blancas son:\r\n");
 		for(int i=0;i<this.mano.size();i++) {
-			mano+= i + ". " + this.mano.get(i).getTexto() + "\n";
+			System.out.println(i + ". " + this.mano.get(i).getTexto() + "\n");
 		}
-		return mano;
 	}
 	
 	public Carta jugarCarta(int index) {
@@ -40,12 +40,22 @@ public class Jugador {
 		return this.mano.size();
 	}
 	
-	public void elegirCarta() {
+	public Carta elegirCarta(Carta n) {
+		Scanner sc=new Scanner(System.in);
 		
+		//AQUÍ DEBERÍA RECOGER LA CARTA NEGRA QUE ME MANDA EL SV
+		
+		this.muestraMano();
+		System.out.println("SELECCIONA EL NÚMERO DE LA CARTA QUE QUIERES JUGAR");
+		int toPlay=sc.nextInt();
+		
+		//AQUÍ DEBERÍA ENVIAR LA CARTA QUE QUIERO JUGAR
+		sc.close();
+		return this.mano.remove(toPlay);
 	}
 	
-	public void cambiarZar() {
-		this.zar= !this.zar;
+	public void setZar(boolean zar) {
+		this.zar = zar;
 	}
 	
 	public boolean isZar() {
