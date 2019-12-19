@@ -44,7 +44,6 @@ public class Jugador {
 		Scanner sc=new Scanner(System.in);
 		
 		//AQUÍ DEBERÍA RECOGER LA CARTA NEGRA QUE ME MANDA EL SV
-		
 		this.muestraMano();
 		System.out.println("SELECCIONA EL NÚMERO DE LA CARTA QUE QUIERES JUGAR");
 		int toPlay=sc.nextInt();
