@@ -8,7 +8,7 @@ public class Baraja {
 	private Color color;
 	private List<Carta> cartas = new ArrayList <>();
 	
-	private Baraja(Color c, ArrayList<Carta> listaCartas) {
+	public Baraja(Color c, ArrayList<Carta> listaCartas) {
 		this.color=c;
 		this.cartas=listaCartas;
 	}
