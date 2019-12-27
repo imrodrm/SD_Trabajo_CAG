@@ -1,14 +1,14 @@
 package cartas;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Random;
 
 public class Baraja {
 	private Color color;
-	private List<Carta> cartas = new ArrayList <>();
+	private List<Carta> cartas;
 	
-	public Baraja(Color c, ArrayList<Carta> listaCartas) {
+	public Baraja(Color c, List<Carta> listaCartas) {
 		this.color=c;
 		this.cartas=listaCartas;
 	}
