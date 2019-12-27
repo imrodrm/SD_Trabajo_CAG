@@ -1,8 +1,12 @@
 package servidor;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.concurrent.CyclicBarrier;
 
@@ -10,8 +14,8 @@ public class AceptarPeticion implements Runnable{
 
 	private boolean ultimo;
 	Socket conexion;
-	DataOutputStream dos;
-	DataInputStream dis;
+	BufferedWriter bw;
+	BufferedReader br;
 	CyclicBarrier sincronizador;
 	
 	public AceptarPeticion(Socket s, CyclicBarrier cb) {
@@ -19,12 +23,11 @@ public class AceptarPeticion implements Runnable{
 		this.sincronizador=cb;
 	}
 	
-	@SuppressWarnings("deprecation")
 	public void run() {
 		try {
-			this.dis = new DataInputStream(this.conexion.getInputStream());
-			this.dos = new DataOutputStream(this.conexion.getOutputStream());
-			String ultimo = this.dis.readLine();
+			this.bw = new BufferedWriter(new OutputStreamWriter(new DataOutputStream(this.conexion.getOutputStream())));
+			this.br = new BufferedReader(new InputStreamReader(new DataInputStream(this.conexion.getInputStream())));
+			String ultimo = this.br.readLine();
 			if(ultimo.equalsIgnoreCase("ultimo")) {
 				this.ultimo=true;
 			}
@@ -37,11 +40,11 @@ public class AceptarPeticion implements Runnable{
 		return this.ultimo;
 	}
 	
-	public DataOutputStream getDOS() {
-		return this.dos;
+	public BufferedWriter getBufferedWriter() {
+		return this.bw;
 	}
 	
-	public DataInputStream getDIS() {
-		return this.dis;
+	public BufferedReader getBufferedReader() {
+		return this.br;
 	}
 }

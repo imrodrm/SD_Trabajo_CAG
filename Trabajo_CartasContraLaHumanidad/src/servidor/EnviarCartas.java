@@ -1,25 +1,25 @@
 package servidor;
 
-import java.io.DataOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
 
 import cartas.Carta;
 
 public class EnviarCartas implements Runnable {
 
-	private DataOutputStream dos;
+	private BufferedWriter bw;
 	private Carta enviar;
 	
-	public EnviarCartas(Carta c, DataOutputStream d) {
+	public EnviarCartas(Carta c, BufferedWriter b) {
 		this.enviar=c;
-		this.dos=d;
+		this.bw=b;
 	}
 	
 	
 	@Override
 	public void run(){
 		try {
-			this.dos.writeChars("Negra-" + this.enviar.getTexto());
+			this.bw.write(this.enviar.getColor().toString() + this.enviar.getTexto());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

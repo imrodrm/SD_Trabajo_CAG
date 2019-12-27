@@ -1,7 +1,7 @@
 package servidor;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -22,12 +22,12 @@ public class Servidor_CardsAgainstHumanity {
 		ExecutorService pool = Executors.newFixedThreadPool(4);
 		
 		List<Socket> jug = new ArrayList<Socket>();
-		List<DataOutputStream> outputs = new ArrayList<DataOutputStream>();
-		List<DataInputStream> inputs = new ArrayList<DataInputStream>();
+		List<BufferedWriter> outputs = new ArrayList<BufferedWriter>();
+		List<BufferedReader> inputs = new ArrayList<BufferedReader>();
 		
 		List<Socket> jugadores = Collections.synchronizedList(jug);
-		List<DataOutputStream> outputStreams = Collections.synchronizedList(outputs);
-		List<DataInputStream> inputStreams = Collections.synchronizedList(inputs);
+		List<BufferedWriter> outputStreams = Collections.synchronizedList(outputs);
+		List<BufferedReader> inputStreams = Collections.synchronizedList(inputs);
 		
 		boolean noMasJugadores = false;
 		try (ServerSocket svs = new ServerSocket(555)) {
@@ -37,14 +37,15 @@ public class Servidor_CardsAgainstHumanity {
 				while (true && jugadores.size() <= 4 && !noMasJugadores) {
 					try (Socket cliente = svs.accept()) {
 
-						// ¿Como sincronizo todos los hilos para que los elementos 0 de outputStreams e
-						// inputStreams correspondan al mismo index 0 de jugadores? Sin hilos es facil,
-						// pero con ellos?
+//						¿Como sincronizo todos los hilos para que los elementos 0 de outputStreams e
+//						inputStreams correspondan al mismo index 0 de jugadores? Sin hilos es facil,
+//						pero con ellos? Quizá con ellos también, si cada vez que quiera escribir en vez de pasar como argumentos los BufferedReader, paso el jugadores.get(i).getOutputStream();
+//						O con InputStream, de esta forma no me importa el orden de las listas puesto que solo tengo 1
 						AceptarPeticion peti = new AceptarPeticion(cliente, sincronizador);
 						pool.execute(peti);
 						jugadores.add(cliente);
-						outputStreams.add(peti.getDOS());
-						inputStreams.add(peti.getDIS());
+						outputStreams.add(peti.getBufferedWriter());
+						inputStreams.add(peti.getBufferedReader());
 					}
 				}
 				// PREPARANDO EL JUEGO
@@ -67,18 +68,21 @@ public class Servidor_CardsAgainstHumanity {
 				do {
 					//DESIGNO QUIÉN ES EL ZAR
 					int zar = k % 4;
-					outputStreams.get(zar).writeChars("ZAR");
+					pool.execute(new EnviarZar(outputStreams.get(zar)));
 					//LES MANDO A TODOS LOS JUGADORES LA CARTA NEGRA
 					enviar = barajaNegras.sacarCarta();
 					for (int l = 0; l < jugadores.size(); l++) {
 						pool.execute(new EnviarCartas(enviar, outputStreams.get(l)));
 					}
-					
-					//RECIBIR LA CARTA BLANCA DE LOS JUGADORES
-					
-					//MANDAR AL ZAR LAS BLANCAS
-					
-					//RECIBIR GANADOR DEL ZAR
+					//RECIBIR LA CARTA BLANCA DE LOS JUGADORES Y MANDÁRSELA AL ZAR
+					for(int m=0; m<jugadores.size(); m++) {
+						if(m!=zar) {
+							RecibirCartas rb = new RecibirCartas(inputStreams.get(m));
+							pool.execute(rb);
+							pool.execute(new EnviarCartas(new Carta(rb.getTextoCarta(), Color.BLANCA), outputStreams.get(zar)));
+						}
+					}
+					//RECIBIR GANADOR DEL ZAR Y ENVIAR AL RESTO DE JUGADORES QUIÉN ES EL GANADOR
 					
 					//RECUENTO DE PUNTOS
 					
