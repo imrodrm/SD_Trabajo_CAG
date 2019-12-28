@@ -6,8 +6,11 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,6 +27,8 @@ public class Servidor_CardsAgainstHumanity {
 		List<Socket> jug = new ArrayList<Socket>();
 		List<BufferedWriter> outputs = new ArrayList<BufferedWriter>();
 		List<BufferedReader> inputs = new ArrayList<BufferedReader>();
+		Map<String, Integer> puntosJugadores = new HashMap<String, Integer>();
+		List<String> nombresJugadores = new ArrayList<String>();
 		
 		List<Socket> jugadores = Collections.synchronizedList(jug);
 		List<BufferedWriter> outputStreams = Collections.synchronizedList(outputs);
@@ -44,6 +49,8 @@ public class Servidor_CardsAgainstHumanity {
 						AceptarPeticion peti = new AceptarPeticion(cliente, sincronizador);
 						pool.execute(peti);
 						jugadores.add(cliente);
+						puntosJugadores.put(peti.getNombre(), 0);
+						nombresJugadores.add(peti.getNombre());
 						outputStreams.add(peti.getBufferedWriter());
 						inputStreams.add(peti.getBufferedReader());
 					}
@@ -56,7 +63,6 @@ public class Servidor_CardsAgainstHumanity {
 				barajaNegras.barajar();
 				barajaBlancas.barajar();
 				Carta enviar;
-				List<String> numeroCartasNegras = new ArrayList<String>();
 				for (int i = 0; i < jugadores.size(); i++) {
 					//pool.execute(repartir()); Como lo hago con hilos?. Al ser synchronizedList no hay problema en pasarles la baraja, o si lo hay?
 //					for (int j = 0; j < 60; j++) {
@@ -68,7 +74,7 @@ public class Servidor_CardsAgainstHumanity {
 				do {
 					//DESIGNO QUIÉN ES EL ZAR
 					int zar = k % 4;
-					pool.execute(new EnviarZar(outputStreams.get(zar)));
+					pool.execute(new EnviarMensaje("ZAR", outputStreams.get(zar)));
 					//LES MANDO A TODOS LOS JUGADORES LA CARTA NEGRA
 					enviar = barajaNegras.sacarCarta();
 					for (int l = 0; l < jugadores.size(); l++) {
@@ -83,12 +89,24 @@ public class Servidor_CardsAgainstHumanity {
 						}
 					}
 					//RECIBIR GANADOR DEL ZAR Y ENVIAR AL RESTO DE JUGADORES QUIÉN ES EL GANADOR
-					
+					String ganador = inputStreams.get(zar).readLine();
+					int gana = Integer.parseInt(ganador);
+					puntosJugadores.replace(nombresJugadores.get(gana), puntosJugadores.get(nombresJugadores.get(gana)));
+					for(int n=0; n<jugadores.size(); n++) {
+						if(n!=zar) {
+							pool.execute(new EnviarMensaje(ganador, outputStreams.get(n)));
+						}
+					}
 					//RECUENTO DE PUNTOS
-					
-					//MIRO A VER SI ALGUIEN HA GANADO YA
-					
-				} while (!juegoTerminado(numeroCartasNegras) && k < 10);
+					for(int o=0; o<jugadores.size(); o++) {
+						for(int p=0; p<jugadores.size(); p++) {
+							pool.execute(new EnviarMensaje("El jugador " + nombresJugadores.get(p) + " tiene " + puntosJugadores.get(nombresJugadores.get(p)), outputStreams.get(o)));
+						}
+					}
+				} while (!juegoTerminado(puntosJugadores.values()) && k < 10);
+				for(int q=0; q<jugadores.size(); q++) {
+					pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " , outputStreams.get(q))); //FALTA DEVOLVER EL NOMBRE DEL GANADOR
+				}
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -96,9 +114,9 @@ public class Servidor_CardsAgainstHumanity {
 		}
 	}
 
-	public static boolean juegoTerminado(List<String> mensajesCartas) {
-		for (String s : mensajesCartas) {
-			if (s.equalsIgnoreCase("4")) {
+	public static boolean juegoTerminado(Collection<Integer> mensajesCartas) {
+		for (Integer i : mensajesCartas) {
+			if (i==4) {
 				return true;
 			}
 		}

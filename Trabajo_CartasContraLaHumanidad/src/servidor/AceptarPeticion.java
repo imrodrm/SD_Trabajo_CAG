@@ -13,10 +13,11 @@ import java.util.concurrent.CyclicBarrier;
 public class AceptarPeticion implements Runnable{
 
 	private boolean ultimo;
-	Socket conexion;
-	BufferedWriter bw;
-	BufferedReader br;
-	CyclicBarrier sincronizador;
+	private Socket conexion;
+	private BufferedWriter bw;
+	private BufferedReader br;
+	private CyclicBarrier sincronizador;
+	private String nombre;
 	
 	public AceptarPeticion(Socket s, CyclicBarrier cb) {
 		this.conexion=s;
@@ -27,10 +28,11 @@ public class AceptarPeticion implements Runnable{
 		try {
 			this.bw = new BufferedWriter(new OutputStreamWriter(new DataOutputStream(this.conexion.getOutputStream())));
 			this.br = new BufferedReader(new InputStreamReader(new DataInputStream(this.conexion.getInputStream())));
-			String ultimo = this.br.readLine();
-			if(ultimo.equalsIgnoreCase("ultimo")) {
+			String[] lol = this.br.readLine().split("-");
+			if(lol[0].equalsIgnoreCase("ultimo")) {
 				this.ultimo=true;
 			}
+			this.nombre = lol[1];
 		}catch(IOException e) {
 			e.printStackTrace();
 		}
@@ -46,5 +48,9 @@ public class AceptarPeticion implements Runnable{
 	
 	public BufferedReader getBufferedReader() {
 		return this.br;
+	}
+	
+	public String getNombre() {
+		return this.nombre;
 	}
 }
