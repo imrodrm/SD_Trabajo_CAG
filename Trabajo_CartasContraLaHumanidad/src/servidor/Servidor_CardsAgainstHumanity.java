@@ -39,6 +39,7 @@ public class Servidor_CardsAgainstHumanity {
 				Map<String, Integer> puntosJugadores = Collections.synchronizedMap(puntosJug);
 				List<String> nombresJugadores = Collections.synchronizedList(nombresJug);
 				boolean noMasJugadores = false; //Para que si un jugador me dice que es el ultimo, salir del bucle
+				boolean terminado = false;
 //				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4
 				final CyclicBarrier sincronizador = new CyclicBarrier(5);
 				while (jugadores.size() <= 4 && !noMasJugadores) {
@@ -58,6 +59,9 @@ public class Servidor_CardsAgainstHumanity {
 				}
 				sincronizador.await();
 				// PREPARANDO EL JUEGO
+				for(BufferedWriter bw: outputStreams) { //PARA INFORMAR DEL NUMERO DE JUGADORES (FACILITA LAS COSAS)
+					bw.write(jugadores.size());
+				}
 				List<Carta> cartasNegras = Collections.synchronizedList(CrearCartas.crearNegras());
 				List<Carta> cartasBlancas = Collections.synchronizedList(CrearCartas.crearBlancas());
 				Baraja barajaNegras = new Baraja(Color.NEGRA, cartasNegras);
@@ -96,7 +100,7 @@ public class Servidor_CardsAgainstHumanity {
 						}
 					}
 					//MANDARLE LAS CARTAS AL ZAR
-					outputStreams.get(zar).write(textoCartas.values().size());
+					//outputStreams.get(zar).write(textoCartas.values().size());
 					for(String s: textoCartas.values()) {
 						outputStreams.get(zar).write(s);
 					}
@@ -117,8 +121,23 @@ public class Servidor_CardsAgainstHumanity {
 					}
 					
 					//ENVIAR UNA CARTA BLANCA A TODOS LOS JUGADORES MENOS AL ZAR
-					
-				} while (!juegoTerminado(puntosJugadores.values()) && turno < 10);
+					for(int q=0; q<jugadores.size(); q++) {
+						if(q!=zar) {
+							pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q)));
+						}
+					}
+					terminado = juegoTerminado(puntosJugadores.values());
+					if(terminado) {
+						for(int r=0; r<jugadores.size(); r++) {
+							pool.execute(new EnviarMensaje("Ronda " + turno + " terminada", outputStreams.get(r)));
+						}
+					}
+					else {
+						for(int s=0; s<jugadores.size(); s++) {
+							pool.execute(new EnviarMensaje("Terminado", outputStreams.get(s)));
+						}
+					}
+				} while (!terminado && turno < 10);
 				
 				for(int q=0; q<jugadores.size(); q++) {
 					pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " + getKeyByValue(puntosJugadores) , outputStreams.get(q)));

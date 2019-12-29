@@ -28,12 +28,14 @@ public class Jugar {
 			String ultimo= sc.nextLine();
 			System.out.println("Cual es tu nombre?");
 			String nombre = sc.nextLine();
+			String estadoJuego="";
 			if(ultimo.equalsIgnoreCase("s")) {
 				bw.write("ultimo-" + nombre);
 			}
 			else {
 				bw.write("no-" + nombre);
 			}
+			int numJugadores = br.read();
 			List<Carta> mano = new ArrayList<Carta>();
 			String leerCarta;
 			Carta c;
@@ -43,8 +45,8 @@ public class Jugar {
 				mano.add(c);
 			}
 			Jugador jugador = new Jugador(mano, nombre);
-			while(true) { //TENGO QUE MIRAR COMO CONSIGO QUE EL JUEGO ACABE DESDE EL CLIENTE
-				if(br.readLine().equalsIgnoreCase("ZAR")) {
+			do { 
+				if(br.readLine().equals("ZAR")) {
 					jugador.setZar(true);
 				}
 				else {
@@ -55,10 +57,13 @@ public class Jugar {
 					jugador.muestraMano();
 					System.out.println("Introduce el numero de la carta a jugar");
 					int a = sc.nextInt();
-					Carta enviar = mano.get(a);
+					Carta enviar = jugador.jugarCarta(a);
 					bw.write(jugador.getNombre() + "-" + enviar.getTexto());
-					
+					System.out.println("El zar esta eligiendo la carta ganadora...");
 					//Recibir la carta ganadora
+					String ganadoraRonda = br.readLine();
+					String[] nombreYCartaGanadora = ganadoraRonda.split("-");
+					System.out.println("La persona que ha ganado la ronda ha sido " + nombreYCartaGanadora[0] + ", y su carta ha sido " + nombreYCartaGanadora[1]);
 				}
 				else {
 					int jug = br.read();
@@ -74,10 +79,17 @@ public class Jugar {
 					int ganadora = sc.nextInt();
 					bw.write(cartasBlancasJugadas.get(ganadora));
 				}
-				
-				
-				sc.close();
-			}
+				System.out.println("El recuento de puntos es:");
+				for(int k=0; k<numJugadores; k++) {
+					System.out.println(br.readLine());
+				}
+				Carta robar = new Carta(br.readLine(), Color.BLANCA);
+				mano.add(robar);
+				estadoJuego = br.readLine();
+				System.out.println(estadoJuego);
+			}while(estadoJuego.equals("Ronda"));
+			System.out.println(br.readLine());
+			sc.close();
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
