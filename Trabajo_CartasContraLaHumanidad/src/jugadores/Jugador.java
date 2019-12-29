@@ -1,6 +1,6 @@
 package jugadores;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.Scanner;
 
@@ -8,7 +8,7 @@ import cartas.Carta;
 
 public class Jugador {
 	
-	private List<Carta> mano = new ArrayList<Carta>();
+	private List<Carta> mano;
 	private String nombre;
 	private boolean zar;
 	

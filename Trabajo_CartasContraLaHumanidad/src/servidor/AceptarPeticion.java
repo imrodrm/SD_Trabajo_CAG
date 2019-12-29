@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
 public class AceptarPeticion implements Runnable{
@@ -33,7 +34,14 @@ public class AceptarPeticion implements Runnable{
 				this.ultimo=true;
 			}
 			this.nombre = lol[1];
+			sincronizador.await(); //
 		}catch(IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BrokenBarrierException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

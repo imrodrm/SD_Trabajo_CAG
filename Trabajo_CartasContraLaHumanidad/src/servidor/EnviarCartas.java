@@ -19,7 +19,7 @@ public class EnviarCartas implements Runnable {
 	@Override
 	public void run(){
 		try {
-			this.bw.write(this.enviar.getColor().toString() + this.enviar.getTexto());
+			this.bw.write(this.enviar.getTexto());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
