@@ -19,6 +19,7 @@ public class EnviarMensaje implements Runnable {
 		// TODO Auto-generated method stub
 		try {
 			this.bw.write(this.mensaje);
+			this.bw.flush();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

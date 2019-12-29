@@ -25,10 +25,6 @@ public class Baraja {
 		}
 	}
 	
-	public Color getColor() {
-		return this.color;
-	}
-	
 	public Carta sacarCarta() {
 		return this.cartas.remove(this.cartas.size()-1);
 	}

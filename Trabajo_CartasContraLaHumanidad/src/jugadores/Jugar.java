@@ -31,9 +31,11 @@ public class Jugar {
 			String estadoJuego="";
 			if(ultimo.equalsIgnoreCase("s")) {
 				bw.write("ultimo-" + nombre);
+				bw.flush();
 			}
 			else {
 				bw.write("no-" + nombre);
+				bw.flush();
 			}
 			int numJugadores = br.read();
 			List<Carta> mano = new ArrayList<Carta>();
@@ -59,6 +61,7 @@ public class Jugar {
 					int a = sc.nextInt();
 					Carta enviar = jugador.jugarCarta(a);
 					bw.write(jugador.getNombre() + "-" + enviar.getTexto());
+					bw.flush();
 					System.out.println("El zar esta eligiendo la carta ganadora...");
 					//Recibir la carta ganadora
 					String ganadoraRonda = br.readLine();
@@ -78,6 +81,7 @@ public class Jugar {
 					System.out.println("Por favor, elija el numero asociado a la carta ganadora");
 					int ganadora = sc.nextInt();
 					bw.write(cartasBlancasJugadas.get(ganadora));
+					bw.flush();
 				}
 				System.out.println("El recuento de puntos es:");
 				for(int k=0; k<numJugadores; k++) {

@@ -20,6 +20,7 @@ public class EnviarCartas implements Runnable {
 	public void run(){
 		try {
 			this.bw.write(this.enviar.getTexto());
+			this.bw.flush();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
