@@ -2,7 +2,9 @@ package servidor;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -11,8 +13,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -26,13 +26,11 @@ public class Servidor_CardsAgainstHumanity {
 		try (ServerSocket svs = new ServerSocket(5555)) {
 			while (true) {
 				ExecutorService pool = Executors.newFixedThreadPool(4);
-
 				List<Socket> jug = new ArrayList<Socket>();
 				List<BufferedWriter> outputs = new ArrayList<BufferedWriter>();
 				List<BufferedReader> inputs = new ArrayList<BufferedReader>();
 				Map<String, Integer> puntosJug = new HashMap<String, Integer>();
 				List<String> nombresJug = new ArrayList<String>();
-
 				List<Socket> jugadores = Collections.synchronizedList(jug);
 				List<BufferedWriter> outputStreams = Collections.synchronizedList(outputs);
 				List<BufferedReader> inputStreams = Collections.synchronizedList(inputs);
@@ -41,22 +39,26 @@ public class Servidor_CardsAgainstHumanity {
 				boolean noMasJugadores = false; // Para que si un jugador me dice que es el ultimo, salir del bucle
 				boolean terminado = false;
 //				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4
-				final CyclicBarrier sincronizador = new CyclicBarrier(5);
 				try (Socket cliente = svs.accept()) {
 					while (jugadores.size() <= 4 && !noMasJugadores) {
 //						¿Como sincronizo todos los hilos para que los elementos 0 de outputStreams e
 //						inputStreams correspondan al mismo index 0 de jugadores y nombresJugadores Sin hilos es facil,
 //						pero con ellos? Si no, puedo crear Maps y pasárselos a los hilos, pero no acabo de ver que sea lo óptimo
-						AceptarPeticion peti = new AceptarPeticion(cliente, sincronizador);
-						pool.execute(peti);
-						sincronizador.await();
+						AceptarPeticion hilo = new AceptarPeticion(cliente);
+						System.out.println("Voy a ejecutar a verlo.");
+						hilo.run();
+						System.out.println("Esperando al hilo...");
+						hilo.join();
+						System.out.println("El hilo ya ha acabado.");
 						jugadores.add(cliente);
-						puntosJugadores.put(peti.getNombre(), 0);
-						nombresJugadores.add(peti.getNombre());
-						outputStreams.add(peti.getBufferedWriter());
-						inputStreams.add(peti.getBufferedReader());
-						noMasJugadores = peti.getultimo();
+						puntosJugadores.put(hilo.getNombre(), 0);
+						nombresJugadores.add(hilo.getNombre());
+						outputStreams.add(hilo.getBufferedWriter());
+						inputStreams.add(hilo.getBufferedReader());
+						noMasJugadores = hilo.getultimo();
+						System.out.println(hilo.getNombre());
 					}
+					System.out.println("Ultimo jugador");
 //					PREPARANDO EL JUEGO
 					for (BufferedWriter bw : outputStreams) { // PARA INFORMAR DEL NUMERO DE JUGADORES (FACILITA LAS
 																// COSAS)
@@ -69,7 +71,7 @@ public class Servidor_CardsAgainstHumanity {
 					barajaNegras.barajar();
 					barajaBlancas.barajar();
 					Carta enviar;
-					for (int j = 0; j < 40; j++) {
+					for (int j = 0; j < 10; j++) {
 						pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(j % 4)));
 					}
 					int turno = 0;
@@ -144,9 +146,6 @@ public class Servidor_CardsAgainstHumanity {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (BrokenBarrierException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}

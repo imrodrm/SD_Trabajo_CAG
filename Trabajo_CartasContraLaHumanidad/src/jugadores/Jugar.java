@@ -30,11 +30,11 @@ public class Jugar {
 			String nombre = sc.nextLine();
 			String estadoJuego="";
 			if(ultimo.equalsIgnoreCase("s")) {
-				bw.write("ultimo-" + nombre);
+				bw.write("ultimo-" + nombre + "\r\\n");
 				bw.flush();
 			}
 			else {
-				bw.write("no-" + nombre);
+				bw.write("no-" + nombre + "\r\\n");
 				bw.flush();
 			}
 			int numJugadores = br.read();
