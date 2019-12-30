@@ -30,18 +30,19 @@ public class Jugar {
 			String nombre = sc.nextLine();
 			String estadoJuego="";
 			if(ultimo.equalsIgnoreCase("s")) {
-				bw.write("ultimo-" + nombre + "\r\\n");
+				bw.write("ultimo-" + nombre + "\r\n");
 				bw.flush();
 			}
 			else {
-				bw.write("no-" + nombre + "\r\\n");
+				bw.write("no-" + nombre + "\r\n");
 				bw.flush();
 			}
-			int numJugadores = br.read();
+			int numJugadores = Integer.parseInt(br.readLine());
+			System.out.println("El numero de jugadores es: " + numJugadores);
 			List<Carta> mano = new ArrayList<Carta>();
 			String leerCarta;
 			Carta c;
-			for(int i=0; i<10; i++) {
+			for(int i=0; i<4; i++) {
 				leerCarta = br.readLine();
 				c = new Carta(leerCarta, Color.BLANCA);
 				mano.add(c);
@@ -50,17 +51,18 @@ public class Jugar {
 			do { 
 				if(br.readLine().equals("ZAR")) {
 					jugador.setZar(true);
+					System.out.println("Eres el ZAR de esta ronda");
 				}
 				else {
 					jugador.setZar(false);
 				}
-				System.out.println("La carta NEGRA de esta ronda es " + br.readLine());
+				System.out.println("La carta NEGRA de esta ronda es \r\n" + br.readLine());
 				if(!jugador.isZar()) {
 					jugador.muestraMano();
 					System.out.println("Introduce el numero de la carta a jugar");
 					int a = sc.nextInt();
 					Carta enviar = jugador.jugarCarta(a);
-					bw.write(jugador.getNombre() + "-" + enviar.getTexto());
+					bw.write(jugador.getNombre() + "-" + enviar.getTexto() + "\r\n");
 					bw.flush();
 					System.out.println("El zar esta eligiendo la carta ganadora...");
 					//Recibir la carta ganadora
@@ -80,7 +82,7 @@ public class Jugar {
 					}
 					System.out.println("Por favor, elija el numero asociado a la carta ganadora");
 					int ganadora = sc.nextInt();
-					bw.write(cartasBlancasJugadas.get(ganadora));
+					bw.write(cartasBlancasJugadas.get(ganadora) + "/r/n");
 					bw.flush();
 				}
 				System.out.println("El recuento de puntos es:");

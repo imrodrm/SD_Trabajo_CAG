@@ -3,8 +3,10 @@ package servidor;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -13,6 +15,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,7 +29,8 @@ public class Servidor_CardsAgainstHumanity {
 	public static void main(String[] args) {
 		try (ServerSocket svs = new ServerSocket(5555)) {
 			while (true) {
-				ExecutorService pool = Executors.newFixedThreadPool(4);
+//				CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR 
+				ExecutorService pool = Executors.newFixedThreadPool(2);
 				List<Socket> jug = new ArrayList<Socket>();
 				List<BufferedWriter> outputs = new ArrayList<BufferedWriter>();
 				List<BufferedReader> inputs = new ArrayList<BufferedReader>();
@@ -36,34 +41,35 @@ public class Servidor_CardsAgainstHumanity {
 				List<BufferedReader> inputStreams = Collections.synchronizedList(inputs);
 				Map<String, Integer> puntosJugadores = Collections.synchronizedMap(puntosJug);
 				List<String> nombresJugadores = Collections.synchronizedList(nombresJug);
+				final CyclicBarrier sincronizador = new CyclicBarrier(2);
 				boolean noMasJugadores = false; // Para que si un jugador me dice que es el ultimo, salir del bucle
 				boolean terminado = false;
 //				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4
 				try (Socket cliente = svs.accept()) {
 					while (jugadores.size() <= 4 && !noMasJugadores) {
-//						¿Como sincronizo todos los hilos para que los elementos 0 de outputStreams e
-//						inputStreams correspondan al mismo index 0 de jugadores y nombresJugadores Sin hilos es facil,
-//						pero con ellos? Si no, puedo crear Maps y pasárselos a los hilos, pero no acabo de ver que sea lo óptimo
-						AceptarPeticion hilo = new AceptarPeticion(cliente);
-						System.out.println("Voy a ejecutar a verlo.");
-						hilo.run();
-						System.out.println("Esperando al hilo...");
-						hilo.join();
-						System.out.println("El hilo ya ha acabado.");
+//						Se que debería hacerlo con hilos, pero si tengo que esperar en el principal para
+//						añadir los jugadores, Readers, Writers, etc en el mismo orden, creo que no crear los hilos
+//						ahorrará memoria.
 						jugadores.add(cliente);
-						puntosJugadores.put(hilo.getNombre(), 0);
-						nombresJugadores.add(hilo.getNombre());
-						outputStreams.add(hilo.getBufferedWriter());
-						inputStreams.add(hilo.getBufferedReader());
-						noMasJugadores = hilo.getultimo();
-						System.out.println(hilo.getNombre());
+						BufferedReader br = new BufferedReader(new InputStreamReader(new DataInputStream(cliente.getInputStream())));
+						BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new DataOutputStream(cliente.getOutputStream())));
+						inputStreams.add(br);
+						outputStreams.add(bw);
+						String mensajeBienvenida = br.readLine();
+						String[] mensaje = mensajeBienvenida.split("-");
+						puntosJugadores.put(mensaje[1], 0);
+						nombresJugadores.add(mensaje[1]);
+						if(mensaje[0].equals("ultimo")) {
+							noMasJugadores=true;
+						}
 					}
 					System.out.println("Ultimo jugador");
-//					PREPARANDO EL JUEGO
-					for (BufferedWriter bw : outputStreams) { // PARA INFORMAR DEL NUMERO DE JUGADORES (FACILITA LAS
-																// COSAS)
-						bw.write(jugadores.size());
+//					PREPARANDO EL JUEGO...
+					for(int j=0; j<jugadores.size(); j++) {
+						pool.execute(new EnviarMensaje(jugadores.size() + "\r\n", outputStreams.get(j), sincronizador));
 					}
+					sincronizador.await();
+					sincronizador.reset();
 					List<Carta> cartasNegras = Collections.synchronizedList(CrearCartas.crearNegras());
 					List<Carta> cartasBlancas = Collections.synchronizedList(CrearCartas.crearBlancas());
 					Baraja barajaNegras = new Baraja(Color.NEGRA, cartasNegras);
@@ -71,24 +77,30 @@ public class Servidor_CardsAgainstHumanity {
 					barajaNegras.barajar();
 					barajaBlancas.barajar();
 					Carta enviar;
-					for (int j = 0; j < 10; j++) {
-						pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(j % 4)));
+					//CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR
+					for (int j = 0; j < 4; j++) {
+						//Repartir cartas carta
+						pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(0), sincronizador));
 					}
+					//HACER EL AWAIT
+					System.out.println("Todas las cartas enviadas");
+					sincronizador.await();
+					sincronizador.reset();
 					int turno = 0;
 					do {
 //					DESIGNO QUIÉN ES EL ZAR
 						int zar = turno % 4;
 						for (int z = 0; z < jugadores.size(); z++) {
 							if (z != zar) {
-								pool.execute(new EnviarMensaje("NoZAR", outputStreams.get(zar)));
+								pool.execute(new EnviarMensaje("NoZAR\r\n", outputStreams.get(z), sincronizador));
 							} else {
-								pool.execute(new EnviarMensaje("ZAR", outputStreams.get(zar)));
+								pool.execute(new EnviarMensaje("nZAR\r\n", outputStreams.get(z), sincronizador));
 							}
 						}
 //					LES MANDO A TODOS LOS JUGADORES LA CARTA NEGRA
 						enviar = barajaNegras.sacarCarta();
 						for (int l = 0; l < jugadores.size(); l++) {
-							pool.execute(new EnviarCartas(enviar, outputStreams.get(l)));
+							pool.execute(new EnviarCartas(enviar, outputStreams.get(l), sincronizador));
 						}
 //					RECIBIR LA CARTA BLANCA DE LOS JUGADORES (menos el Zar)
 						Map<String, String> textoCartas = new HashMap<String, String>();
@@ -111,36 +123,36 @@ public class Servidor_CardsAgainstHumanity {
 								puntosJugadores.get(nombresJugadores.get(gana)));
 						for (int n = 0; n < jugadores.size(); n++) {
 							if (n != zar) {
-								pool.execute(new EnviarMensaje(ganador, outputStreams.get(n)));
+								pool.execute(new EnviarMensaje(ganador + "\r\n", outputStreams.get(n), sincronizador));
 							}
 						}
 //					RECUENTO DE PUNTOS
 						for (int o = 0; o < jugadores.size(); o++) {
 							for (int p = 0; p < jugadores.size(); p++) {
 								pool.execute(new EnviarMensaje("El jugador/a " + nombresJugadores.get(p) + " tiene "
-										+ puntosJugadores.get(nombresJugadores.get(p)), outputStreams.get(o)));
+										+ puntosJugadores.get(nombresJugadores.get(p)) + "\r\n", outputStreams.get(o), sincronizador));
 							}
 						}
 //					ENVIAR UNA CARTA BLANCA A TODOS LOS JUGADORES MENOS AL ZAR
 						for (int q = 0; q < jugadores.size(); q++) {
 							if (q != zar) {
-								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q)));
+								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q), sincronizador));
 							}
 						}
 						terminado = juegoTerminado(puntosJugadores.values());
 						if (terminado) {
 							for (int r = 0; r < jugadores.size(); r++) {
-								pool.execute(new EnviarMensaje("Ronda " + turno + " terminada", outputStreams.get(r)));
+								pool.execute(new EnviarMensaje("Ronda " + turno + " terminada \r\n\"", outputStreams.get(r), sincronizador));
 							}
 						} else {
 							for (int s = 0; s < jugadores.size(); s++) {
-								pool.execute(new EnviarMensaje("Terminado", outputStreams.get(s)));
+								pool.execute(new EnviarMensaje("FIN \r\n", outputStreams.get(s), sincronizador));
 							}
 						}
 					} while (!terminado && turno < 10);
 					for (int q = 0; q < jugadores.size(); q++) {
-						pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " + getKeyByValue(puntosJugadores),
-								outputStreams.get(q)));
+						pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " + getKeyByValue(puntosJugadores) + "/r/n",
+								outputStreams.get(q), sincronizador));
 					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -148,9 +160,12 @@ public class Servidor_CardsAgainstHumanity {
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+				} catch (BrokenBarrierException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			}
-		} catch (IOException e1) {
+			} 
+		}catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
