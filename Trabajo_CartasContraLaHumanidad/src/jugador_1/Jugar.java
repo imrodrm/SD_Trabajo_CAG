@@ -42,7 +42,7 @@ public class Jugar {
 			List<Carta> mano = new ArrayList<Carta>();
 			String leerCarta;
 			Carta c;
-			for(int i=0; i<4; i++) {
+			for(int i=0; i<(24/numJugadores); i++) {
 				leerCarta = br.readLine();
 				c = new Carta(leerCarta, Color.BLANCA);
 				mano.add(c);

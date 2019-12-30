@@ -13,7 +13,7 @@ public class Baraja {
 		this.cartas=listaCartas;
 	}
 	
-	public void barajar() {
+	public void barajear() {
 		Random r = new Random();
 		Carta aux;
 		for(int i=0; i<50; i++) {

@@ -1,4 +1,4 @@
-package jugador_2;
+package jugador_4;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -17,7 +17,7 @@ import cartas.Carta;
 import cartas.Color;
 import jugador_1.Jugador;
 
-public class Jugar_dos {
+public class Jugar_cuatro {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
