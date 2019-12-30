@@ -30,7 +30,6 @@ public class Servidor_CardsAgainstHumanity {
 		try (ServerSocket svs = new ServerSocket(5555)) {
 			while (true) {
 //				CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR CAMBIAR VALOR 
-				ExecutorService pool = Executors.newFixedThreadPool(2);
 				List<Socket> jug = new ArrayList<Socket>();
 				List<BufferedWriter> outputs = new ArrayList<BufferedWriter>();
 				List<BufferedReader> inputs = new ArrayList<BufferedReader>();
@@ -41,7 +40,6 @@ public class Servidor_CardsAgainstHumanity {
 				List<BufferedReader> inputStreams = Collections.synchronizedList(inputs);
 				Map<String, Integer> puntosJugadores = Collections.synchronizedMap(puntosJug);
 				List<String> nombresJugadores = Collections.synchronizedList(nombresJug);
-				final CyclicBarrier sincronizador = new CyclicBarrier(2);
 				boolean noMasJugadores = false; // Para que si un jugador me dice que es el ultimo, salir del bucle
 				boolean terminado = false;
 //				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4
@@ -63,6 +61,8 @@ public class Servidor_CardsAgainstHumanity {
 							noMasJugadores=true;
 						}
 					}
+					ExecutorService pool = Executors.newFixedThreadPool(jugadores.size()+1);
+					final CyclicBarrier sincronizador = new CyclicBarrier(jugadores.size()+1);
 					System.out.println("Ultimo jugador");
 //					PREPARANDO EL JUEGO...
 					for(int j=0; j<jugadores.size(); j++) {
@@ -94,28 +94,36 @@ public class Servidor_CardsAgainstHumanity {
 							if (z != zar) {
 								pool.execute(new EnviarMensaje("NoZAR\r\n", outputStreams.get(z), sincronizador));
 							} else {
-								pool.execute(new EnviarMensaje("nZAR\r\n", outputStreams.get(z), sincronizador));
+								pool.execute(new EnviarMensaje("ZAR\r\n", outputStreams.get(z), sincronizador));
 							}
 						}
+						sincronizador.await();
+						sincronizador.reset();
 //					LES MANDO A TODOS LOS JUGADORES LA CARTA NEGRA
 						enviar = barajaNegras.sacarCarta();
 						for (int l = 0; l < jugadores.size(); l++) {
 							pool.execute(new EnviarCartas(enviar, outputStreams.get(l), sincronizador));
 						}
+						sincronizador.await();
+						sincronizador.reset();
 //					RECIBIR LA CARTA BLANCA DE LOS JUGADORES (menos el Zar)
 						Map<String, String> textoCartas = new HashMap<String, String>();
 						for (int m = 0; m < jugadores.size(); m++) {
 							if (m != zar) {
-								RecibirCartas rb = new RecibirCartas(inputStreams.get(m));
+								RecibirCartas rb = new RecibirCartas(inputStreams.get(m), sincronizador);
 								pool.execute(rb);
 								String[] a = rb.getTextoCarta().split("-");
 								textoCartas.put(a[0], a[1]); // a[0] nombreJugador, a[1] textoCarta
 							}
 						}
+						sincronizador.await();
+						sincronizador.reset();
 //					MANDARLE LAS CARTAS AL ZAR
 						for (String s : textoCartas.values()) {
 							outputStreams.get(zar).write(s);
 						}
+						sincronizador.await();
+						sincronizador.reset();
 //					RECIBIR GANADOR DEL ZAR Y ENVIAR AL RESTO DE JUGADORES QUIÉN ES EL GANADOR
 						String ganador = inputStreams.get(zar).readLine();
 						int gana = Integer.parseInt(ganador);
@@ -126,6 +134,8 @@ public class Servidor_CardsAgainstHumanity {
 								pool.execute(new EnviarMensaje(ganador + "\r\n", outputStreams.get(n), sincronizador));
 							}
 						}
+						sincronizador.await();
+						sincronizador.reset();
 //					RECUENTO DE PUNTOS
 						for (int o = 0; o < jugadores.size(); o++) {
 							for (int p = 0; p < jugadores.size(); p++) {
@@ -133,27 +143,37 @@ public class Servidor_CardsAgainstHumanity {
 										+ puntosJugadores.get(nombresJugadores.get(p)) + "\r\n", outputStreams.get(o), sincronizador));
 							}
 						}
+						sincronizador.await();
+						sincronizador.reset();
 //					ENVIAR UNA CARTA BLANCA A TODOS LOS JUGADORES MENOS AL ZAR
 						for (int q = 0; q < jugadores.size(); q++) {
 							if (q != zar) {
 								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q), sincronizador));
 							}
 						}
+						sincronizador.await();
+						sincronizador.reset();
 						terminado = juegoTerminado(puntosJugadores.values());
 						if (terminado) {
 							for (int r = 0; r < jugadores.size(); r++) {
 								pool.execute(new EnviarMensaje("Ronda " + turno + " terminada \r\n\"", outputStreams.get(r), sincronizador));
 							}
+							sincronizador.await();
+							sincronizador.reset();
 						} else {
 							for (int s = 0; s < jugadores.size(); s++) {
 								pool.execute(new EnviarMensaje("FIN \r\n", outputStreams.get(s), sincronizador));
 							}
+							sincronizador.await();
+							sincronizador.reset();
 						}
 					} while (!terminado && turno < 10);
 					for (int q = 0; q < jugadores.size(); q++) {
-						pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " + getKeyByValue(puntosJugadores) + "/r/n",
+						pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " + getKeyByValue(puntosJugadores) + "\r\n",
 								outputStreams.get(q), sincronizador));
 					}
+					sincronizador.await();
+					sincronizador.reset();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

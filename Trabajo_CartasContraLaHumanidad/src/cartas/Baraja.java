@@ -29,6 +29,10 @@ public class Baraja {
 		return this.cartas.remove(this.cartas.size()-1);
 	}
 	
+	public Color getColor() {
+		return this.color;
+	}
+	
 	public boolean vacio() {
 		return (this.cartas.size()==0);
 	}

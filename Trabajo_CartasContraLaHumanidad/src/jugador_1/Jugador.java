@@ -1,4 +1,4 @@
-package jugadores;
+package jugador_1;
 
 
 import java.util.List;
