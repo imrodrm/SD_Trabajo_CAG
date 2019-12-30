@@ -2,11 +2,7 @@ package servidor;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -42,30 +38,33 @@ public class Servidor_CardsAgainstHumanity {
 				Map<String, Integer> puntosJugadores = Collections.synchronizedMap(puntosJug);
 				List<String> nombresJugadores = Collections.synchronizedList(nombresJug);
 				
-				boolean noMasJugadores = false;
+				//boolean noMasJugadores = false;
 				boolean terminado = false;
-				
 //				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4.  NO FUNCIONA
-				try (Socket cliente = svs.accept()) {
-					while (jugadores.size() <= 4 && !noMasJugadores) {
+				while(jugadores.size()<4) {
+					try {
+						Socket cliente = svs.accept();
 //						Se que debería hacerlo con hilos, pero si tengo que esperar en el principal para
 //						añadir los jugadores, Readers, Writers, etc, en el mismo orden, creo que no crear los hilos
 //						ahorrará memoria.
-						System.out.println("Aceptando al jugador...");
+						System.out.println("Esperando a los 4 jugadores");
+						AceptarPeticion hilo_1 = new AceptarPeticion(cliente);
+						hilo_1.run();
+						System.out.println("TikiTaka");
+						hilo_1.join();
 						jugadores.add(cliente);
-						BufferedReader br = new BufferedReader(new InputStreamReader(new DataInputStream(cliente.getInputStream())));
-						BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new DataOutputStream(cliente.getOutputStream())));
-						inputStreams.add(br);
-						outputStreams.add(bw);
-						String mensajeBienvenida = br.readLine();
-						String[] mensaje = mensajeBienvenida.split("-");
-						puntosJugadores.put(mensaje[1], 0);
-						nombresJugadores.add(mensaje[1]);
-						if(mensaje[0].equals("ultimo")) {
-							noMasJugadores=true;
+						inputStreams.add(hilo_1.getBr());
+						outputStreams.add(hilo_1.getBw());
+						puntosJugadores.put(hilo_1.getNombre(), 0);
+						nombresJugadores.add(hilo_1.getNombre());
+						if(hilo_1.getUlti()) {
+//							noMasJugadores=true;
 						}
-						System.out.println("Jugador " + mensaje[1] + " anadido");
+						System.out.println("Jugador " + hilo_1.getNombre() + " anadido");
+					}catch(IOException e) {
+						e.printStackTrace();
 					}
+				}
 					ExecutorService pool = Executors.newFixedThreadPool(jugadores.size());
 					final CyclicBarrier sincronizador_5 = new CyclicBarrier(jugadores.size()+1);
 					final CyclicBarrier sincronizador_4 = new CyclicBarrier(jugadores.size());
@@ -146,7 +145,9 @@ public class Servidor_CardsAgainstHumanity {
 						}
 //					RECIBIR GANADOR DEL ZAR Y ENVIAR AL RESTO DE JUGADORES QUIÉN ES EL GANADOR
 						System.out.println("Esperando a que el zar elija...");
-						String ganador = inputStreams.get(zar).readLine(); //Si no tengo zar, para probar sustituir por 0
+						String ganador = inputStreams.get(zar).readLine();
+						 //Si no tengo zar, para probar sustituir por 0
+						System.out.println("El zar eligio");
 						int gana = Integer.parseInt(ganador);
 						int nueva = (puntosJugadores.get(nombresJugadores.get(gana)));
 						String ganadora = textoCartas.get(nombresJugadores.get(gana));
@@ -154,7 +155,6 @@ public class Servidor_CardsAgainstHumanity {
 						puntosJugadores.put(nombresJugadores.get(gana), nueva);
 						for (int n = 0; n < jugadores.size(); n++) {
 							if (n != zar) {
-								System.out.println(ganadora + "\r\n");
 								pool.execute(new EnviarMensaje(nombresJugadores.get(gana) + "-" + ganadora + "\r\n", outputStreams.get(n), sincronizador_4));
 							}
 						}
@@ -174,20 +174,23 @@ public class Servidor_CardsAgainstHumanity {
 //					ENVIAR UNA CARTA BLANCA A TODOS LOS JUGADORES MENOS AL ZAR
 						for (int q = 0; q < jugadores.size(); q++) {
 							if (q != zar) {
-								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q), sincronizador_5));
+								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q), sincronizador_4));
 							}
 						}
-						sincronizador_5.await();
-						sincronizador_5.reset();
+						sincronizador_4.await();
+						sincronizador_4.reset();
+						System.out.println("ESTADO DEL JUEGO 1");
 						terminado = juegoTerminado(puntosJugadores.values());
-						
+						System.out.println("ESTADO DEL JUEGO");
 						//ENVIAR ESTADO DEL JUEGO
 						if (!terminado) {
+							System.out.println("NO TERMINADO");
 							for (int r = 0; r < jugadores.size(); r++) {
 								pool.execute(new EnviarMensaje("Ronda " + (turno+1) + " terminada \r\n", outputStreams.get(r), sincronizador_5));
 							}
 							sincronizador_5.await();
 							sincronizador_5.reset();
+							System.out.println("Siguiente ronda");
 						} else {
 							for (int s = 0; s < jugadores.size(); s++) {
 								pool.execute(new EnviarMensaje("FIN \r\n", outputStreams.get(s), sincronizador_5));
@@ -195,6 +198,7 @@ public class Servidor_CardsAgainstHumanity {
 							sincronizador_5.await();
 							sincronizador_5.reset();
 						}
+						turno++;
 					} while (!terminado && turno < 10);
 					for (int q = 0; q < jugadores.size(); q++) {
 						pool.execute(new EnviarMensaje("LA PERSONA QUE HA GANADO ES " + getKeyByValue(puntosJugadores) + "\r\n",
@@ -202,20 +206,16 @@ public class Servidor_CardsAgainstHumanity {
 					}
 					sincronizador_5.await();
 					sincronizador_5.reset();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (BrokenBarrierException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
 			} 
 		}catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BrokenBarrierException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 

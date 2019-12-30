@@ -74,7 +74,7 @@ public class Jugar {
 					List<String> cartasBlancasJugadas = new ArrayList<String>();
 					String cartaJugada;
 					
-					for(int j=0; j<numJugadores; j++) {
+					for(int j=0; j<numJugadores-1; j++) {
 						cartaJugada=br.readLine();
 						System.out.println(j + ". " + cartaJugada);
 						cartasBlancasJugadas.add(cartaJugada);
@@ -84,7 +84,7 @@ public class Jugar {
 					bw.write(Integer.toString(ganadora)+ "\r\n");
 					bw.flush();
 				}
-				
+			
 				System.out.println("El recuento de puntos es:");
 				for(int k=0; k<numJugadores; k++) {
 					System.out.println(br.readLine());

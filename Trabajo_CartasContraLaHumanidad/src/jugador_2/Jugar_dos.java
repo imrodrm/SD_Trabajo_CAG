@@ -73,7 +73,7 @@ public class Jugar_dos {
 					List<String> cartasBlancasJugadas = new ArrayList<String>();
 					String cartaJugada;
 
-					for (int j = 0; j < numJugadores; j++) {
+					for (int j = 0; j < numJugadores-1; j++) {
 						cartaJugada = br.readLine();
 						System.out.println(j + ". " + cartaJugada);
 						cartasBlancasJugadas.add(cartaJugada);
