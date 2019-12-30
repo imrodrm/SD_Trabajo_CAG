@@ -20,6 +20,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
 import cartas.Baraja;
 import cartas.Carta;
 import cartas.Color;
@@ -40,14 +41,17 @@ public class Servidor_CardsAgainstHumanity {
 				List<BufferedReader> inputStreams = Collections.synchronizedList(inputs);
 				Map<String, Integer> puntosJugadores = Collections.synchronizedMap(puntosJug);
 				List<String> nombresJugadores = Collections.synchronizedList(nombresJug);
+				
 				boolean noMasJugadores = false;
 				boolean terminado = false;
-//				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4
+				
+//				PARTE DE "RECOLECTAR" JUGADORES, HASTA UN MÁXIMO DE 4.  NO FUNCIONA
 				try (Socket cliente = svs.accept()) {
 					while (jugadores.size() <= 4 && !noMasJugadores) {
 //						Se que debería hacerlo con hilos, pero si tengo que esperar en el principal para
-//						añadir los jugadores, Readers, Writers, etc en el mismo orden, creo que no crear los hilos
+//						añadir los jugadores, Readers, Writers, etc, en el mismo orden, creo que no crear los hilos
 //						ahorrará memoria.
+						System.out.println("Aceptando al jugador...");
 						jugadores.add(cliente);
 						BufferedReader br = new BufferedReader(new InputStreamReader(new DataInputStream(cliente.getInputStream())));
 						BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new DataOutputStream(cliente.getOutputStream())));
@@ -60,29 +64,32 @@ public class Servidor_CardsAgainstHumanity {
 						if(mensaje[0].equals("ultimo")) {
 							noMasJugadores=true;
 						}
+						System.out.println("Jugador " + mensaje[1] + " anadido");
 					}
 					ExecutorService pool = Executors.newFixedThreadPool(jugadores.size());
 					final CyclicBarrier sincronizador_5 = new CyclicBarrier(jugadores.size()+1);
 					final CyclicBarrier sincronizador_4 = new CyclicBarrier(jugadores.size());
-					System.out.println("Ultimo jugador");
+					System.out.println("Ultimo jugador, empieza el juego");
 //					PREPARANDO EL JUEGO...
-					for(int j=0; j<jugadores.size(); j++) {
-						pool.execute(new EnviarMensaje(jugadores.size() + "\r\n", outputStreams.get(j), sincronizador_5));
+					System.out.println("Repartiendo...");
+					for(int i=0; i<jugadores.size(); i++) {
+						pool.execute(new EnviarMensaje(jugadores.size() + "\r\n", outputStreams.get(i), sincronizador_5));
 					}
 					sincronizador_5.await();
 					sincronizador_5.reset();
+					
 					List<Carta> cartasNegras = Collections.synchronizedList(CrearCartas.crearNegras());
 					List<Carta> cartasBlancas = Collections.synchronizedList(CrearCartas.crearBlancas());
 					Baraja barajaNegras = new Baraja(Color.NEGRA, cartasNegras);
 					Baraja barajaBlancas = new Baraja(Color.BLANCA, cartasBlancas);
 					barajaNegras.barajear();
 					barajaBlancas.barajear();
+					
 					Carta enviar;
-					//CAMBIAR VALOR de j CAMBIAR VALOR de j CAMBIAR VALOR de j CAMBIAR VALOR de j CAMBIAR VALOR de j y de los outputStreams.get(Creo que sería a j%4, si asi no, reparto 10 al primero, 10 al segundo... en vez de una a cada uno, sin complicarse
 					List<List<Carta>> manos = crearManos(jugadores.size(), barajaBlancas);
 					for (int j = 0; j < jugadores.size(); j++) {
 						//Repartir cartas
-						pool.execute(new EnviarMano(manos.get(j), outputStreams.get(0), sincronizador_5));
+						pool.execute(new EnviarMano(manos.get(j), outputStreams.get(j), sincronizador_5));
 					}
 					sincronizador_5.await();
 					sincronizador_5.reset();
@@ -90,12 +97,12 @@ public class Servidor_CardsAgainstHumanity {
 					int turno = 0;
 					do {
 //					DESIGNO QUIÉN ES EL ZAR
-						int zar = turno % 4;
-						for (int z = 0; z < jugadores.size(); z++) {
-							if (z != zar) {
-								pool.execute(new EnviarMensaje("NoZAR\r\n", outputStreams.get(z), sincronizador_5)); //Si no es el zar, le envio un mensaje de que el no lo es
+						int zar = turno% 4; //int zar = 4 Para probar cuando no se es zar...
+						for (int k = 0; k < jugadores.size(); k++) {
+							if (k != zar) {
+								pool.execute(new EnviarMensaje("NoZAR\r\n", outputStreams.get(k), sincronizador_5)); //Si no es el zar, le envio un mensaje de que el no lo es
 							} else {
-								pool.execute(new EnviarMensaje("ZAR\r\n", outputStreams.get(z), sincronizador_5)); //Si es el zar, le aviso de ello.
+								pool.execute(new EnviarMensaje("ZAR\r\n", outputStreams.get(k), sincronizador_5)); //Si es el zar, le aviso de ello.
 							}
 						}
 						sincronizador_5.await();
@@ -109,51 +116,75 @@ public class Servidor_CardsAgainstHumanity {
 						sincronizador_5.reset();
 //					RECIBIR LA CARTA BLANCA DE LOS JUGADORES (menos del Zar)
 						Map<String, String> textoCartas = new HashMap<String, String>();
+						List<RecibirCartas> recibido = new ArrayList<RecibirCartas>();
+						System.out.println("Esperando a las cartas de los jugadores...");
 						for (int m = 0; m < jugadores.size(); m++) {
 							if (m != zar) {
-								RecibirCartas rb = new RecibirCartas(inputStreams.get(m), sincronizador_4);
+//								RecibirCartas rb = new RecibirCartas(inputStreams.get(m), sincronizador_5);
+								RecibirCartas rb = new RecibirCartas(inputStreams.get(m), sincronizador_4); 
 								pool.execute(rb);
-								String[] a = rb.getTextoCarta().split("-");
-								textoCartas.put(a[0], a[1]); // a[0] nombreJugador, a[1] textoCarta
+								recibido.add(rb);
 							}
 						}
+						//Si quiero probar el zar, comentar el for y poner esto descomentado...
+//						textoCartas.put("Ima", "no tira soy inutil");
+//						textoCartas.put("Javi", "El seguro que lo sabria hacer");
+//						Ahora tengo que usar los del sincronizador_5 porque solo consigo un cliente, que sad todo y que useless soy:
 						sincronizador_4.await();
 						sincronizador_4.reset();
+//						sincronizador_5.await();
+//						sincronizador_5.reset();
+						for(RecibirCartas rc : recibido) {
+							String[] a = rc.getTextoCarta().split("-");
+							textoCartas.put(a[0], a[1]); // a[0] nombreJugador, a[1] textoCarta
+						}
 //					MANDARLE LAS CARTAS AL ZAR
+						//Si no tengo zar, comentar esto
 						for (String s : textoCartas.values()) {
-							outputStreams.get(zar).write(s); //No lo hago con hilos para que no se rompa el orden
+								outputStreams.get(zar).write(s +"\r\n"); //No lo hago con hilos para que no se rompa el orden
+								outputStreams.get(zar).flush();
 						}
 //					RECIBIR GANADOR DEL ZAR Y ENVIAR AL RESTO DE JUGADORES QUIÉN ES EL GANADOR
-						String ganador = inputStreams.get(zar).readLine();
+						System.out.println("Esperando a que el zar elija...");
+						String ganador = inputStreams.get(zar).readLine(); //Si no tengo zar, para probar sustituir por 0
 						int gana = Integer.parseInt(ganador);
-						puntosJugadores.replace(nombresJugadores.get(gana), puntosJugadores.get(nombresJugadores.get(gana)));
+						int nueva = (puntosJugadores.get(nombresJugadores.get(gana)));
+						String ganadora = textoCartas.get(nombresJugadores.get(gana));
+						nueva++;
+						puntosJugadores.put(nombresJugadores.get(gana), nueva);
 						for (int n = 0; n < jugadores.size(); n++) {
 							if (n != zar) {
-								pool.execute(new EnviarMensaje(ganador + "\r\n", outputStreams.get(n), sincronizador_4));
+								System.out.println(ganadora + "\r\n");
+								pool.execute(new EnviarMensaje(nombresJugadores.get(gana) + "-" + ganadora + "\r\n", outputStreams.get(n), sincronizador_4));
 							}
 						}
 						sincronizador_4.await();
 						sincronizador_4.reset();
 //					RECUENTO DE PUNTOS
-						for (int o = 0; o < jugadores.size(); o++) {
-							for (int p = 0; p < jugadores.size(); p++) {
-								pool.execute(new EnviarMensaje("El jugador/a " + nombresJugadores.get(p) + " tiene " + puntosJugadores.get(nombresJugadores.get(p)) + "\r\n", outputStreams.get(o), sincronizador_5));
-							}
+						System.out.println(puntosJugadores.values());
+						List<String> puntuaciones = new ArrayList<String>();
+						for(int o=0; o<jugadores.size(); o++) {
+							puntuaciones.add("El jugador/a " + nombresJugadores.get(o) + " tiene " + puntosJugadores.get(nombresJugadores.get(o)) + " punto(s)" +"\r\n");
+						}
+						for (int p = 0; p < jugadores.size(); p++) {
+							pool.execute(new EnviarPuntuacion(puntuaciones, outputStreams.get(p), sincronizador_5));
 						}
 						sincronizador_5.await();
 						sincronizador_5.reset();
 //					ENVIAR UNA CARTA BLANCA A TODOS LOS JUGADORES MENOS AL ZAR
 						for (int q = 0; q < jugadores.size(); q++) {
 							if (q != zar) {
-								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q), sincronizador_4));
+								pool.execute(new EnviarCartas(barajaBlancas.sacarCarta(), outputStreams.get(q), sincronizador_5));
 							}
 						}
-						sincronizador_4.await();
-						sincronizador_4.reset();
+						sincronizador_5.await();
+						sincronizador_5.reset();
 						terminado = juegoTerminado(puntosJugadores.values());
-						if (terminado) {
+						
+						//ENVIAR ESTADO DEL JUEGO
+						if (!terminado) {
 							for (int r = 0; r < jugadores.size(); r++) {
-								pool.execute(new EnviarMensaje("Ronda " + turno + " terminada \r\n\"", outputStreams.get(r), sincronizador_5));
+								pool.execute(new EnviarMensaje("Ronda " + (turno+1) + " terminada \r\n", outputStreams.get(r), sincronizador_5));
 							}
 							sincronizador_5.await();
 							sincronizador_5.reset();

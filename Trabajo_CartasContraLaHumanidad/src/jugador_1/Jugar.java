@@ -24,10 +24,10 @@ public class Jugar {
 			Scanner sc = new Scanner(System.in);
 			BufferedReader br = new BufferedReader(new InputStreamReader(new DataInputStream(s.getInputStream())));
 			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new DataOutputStream(s.getOutputStream())));
-			System.out.println("Eres el ultimo jugador? S/N");
-			String ultimo= sc.nextLine();
 			System.out.println("Cual es tu nombre?");
 			String nombre = sc.nextLine();
+			System.out.println("Eres el ultimo jugador? S/N");
+			String ultimo= sc.nextLine();
 			String estadoJuego="";
 			if(ultimo.equalsIgnoreCase("s")) {
 				bw.write("ultimo-" + nombre + "\r\n");
@@ -56,7 +56,7 @@ public class Jugar {
 				else {
 					jugador.setZar(false);
 				}
-				System.out.println("La carta NEGRA de esta ronda es \r\n" + br.readLine());
+				System.out.println("La carta NEGRA de esta ronda es: \r\n" + br.readLine());
 				if(!jugador.isZar()) {
 					jugador.muestraMano();
 					System.out.println("Introduce el numero de la carta a jugar");
@@ -71,29 +71,34 @@ public class Jugar {
 					System.out.println("La persona que ha ganado la ronda ha sido " + nombreYCartaGanadora[0] + ", y su carta ha sido " + nombreYCartaGanadora[1]);
 				}
 				else {
-					int jug = br.read();
 					List<String> cartasBlancasJugadas = new ArrayList<String>();
 					String cartaJugada;
-					System.out.println();
-					for(int j=0; j<jug; j++) {
+					
+					for(int j=0; j<numJugadores; j++) {
 						cartaJugada=br.readLine();
 						System.out.println(j + ". " + cartaJugada);
 						cartasBlancasJugadas.add(cartaJugada);
 					}
 					System.out.println("Por favor, elija el numero asociado a la carta ganadora");
 					int ganadora = sc.nextInt();
-					bw.write(cartasBlancasJugadas.get(ganadora) + "/r/n");
+					bw.write(Integer.toString(ganadora)+ "\r\n");
 					bw.flush();
 				}
+				
 				System.out.println("El recuento de puntos es:");
 				for(int k=0; k<numJugadores; k++) {
 					System.out.println(br.readLine());
 				}
-				Carta robar = new Carta(br.readLine(), Color.BLANCA);
-				mano.add(robar);
+				
+				if(!jugador.isZar()) {
+					leerCarta = br.readLine();
+					System.out.println("La carta que has robado es: " + leerCarta);
+					c = new Carta(leerCarta, Color.BLANCA);
+					mano.add(c);
+				}
 				estadoJuego = br.readLine();
 				System.out.println(estadoJuego);
-			}while(estadoJuego.equals("Ronda"));
+			}while(estadoJuego.startsWith("Ronda"));
 			System.out.println(br.readLine());
 			sc.close();
 		} catch (UnknownHostException e) {
